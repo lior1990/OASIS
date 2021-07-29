@@ -20,6 +20,7 @@ def get_dataloaders(opt):
     dataset_val   = file.__dict__[dataset_name].__dict__[dataset_name](opt, for_metrics=True)
     print("Created %s, size train: %d, size val: %d" % (dataset_name, len(dataset_train), len(dataset_val)))
 
+    assert len(dataset_train) >= opt.batch_size, "drop last is set to true so the dataset size must be greater than batch size"
     dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size = opt.batch_size, shuffle = True, drop_last=True)
     dataloader_val = torch.utils.data.DataLoader(dataset_val, batch_size = opt.batch_size, shuffle = False, drop_last=False)
 

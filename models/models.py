@@ -150,10 +150,10 @@ def preprocess_input(opt, data):
 
 
 def generate_labelmix(label, fake_image, real_image):
-    target_map = torch.argmax(label, dim = 1, keepdim = True)
+    target_map = torch.argmax(label, dim = 1, keepdim = True)  # restore from one-hot encoding to numbers
     all_classes = torch.unique(target_map)
     for c in all_classes:
-        target_map[target_map == c] = torch.randint(0,2,(1,))
+        target_map[target_map == c] = torch.randint(0,2,(1,))  # convert target map to a (random) binary mask
     target_map = target_map.float()
     mixed_image = target_map*real_image+(1-target_map)*fake_image
     return mixed_image, target_map
