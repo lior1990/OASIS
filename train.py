@@ -18,7 +18,7 @@ opt = config.read_arguments(train=True)
 timer = utils.timer(opt)
 visualizer_losses = utils.losses_saver(opt)
 losses_computer = losses.losses_computer(opt)
-dataloader, dataloader_val = dataloaders.get_dataloaders(opt)
+dataloader_train, dataloader_val = dataloaders.get_dataloaders(opt)
 im_saver = utils.image_saver(opt)
 fid_computer = fid_pytorch(opt, dataloader_val)
 
@@ -32,10 +32,10 @@ optimizerD = torch.optim.Adam(model.module.netD.parameters(), lr=opt.lr_d, betas
 
 #--- the training loop ---#
 already_started = False
-dataloader_length = len(dataloader) + len(dataloader_val)
-dataloader = itertools.chain(dataloader, dataloader_val)
+dataloader_length = len(dataloader_train) + len(dataloader_val)
 start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, dataloader_length)
 for epoch in tqdm(range(start_epoch, opt.num_epochs)):
+    dataloader = itertools.chain(dataloader_train, dataloader_val)
     for i, data_i in enumerate(dataloader):
         if not already_started and i < start_iter:
             continue
@@ -50,7 +50,7 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         loss_G.backward()
         optimizerG.step()
 
-        if not for_metrics.any():
+        if not (for_metrics > 0).any():
             #--- discriminator update ---#
             model.module.netD.zero_grad()
             loss_D, losses_D_list = model(image, label, "losses_D", losses_computer)
