@@ -50,7 +50,7 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         if train_val:
             cur_iter = (
                     opt.start_val_training_epoch * len(dataloader_train) +
-                    (epoch - opt.start_val_training_epoch * (len(dataloader_val) + len(dataloader_train))) +
+                    ((epoch - opt.start_val_training_epoch) * (len(dataloader_val) + len(dataloader_train))) +
                     i
             )
         else:
