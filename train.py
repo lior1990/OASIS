@@ -32,15 +32,30 @@ optimizerD = torch.optim.Adam(model.module.netD.parameters(), lr=opt.lr_d, betas
 
 #--- the training loop ---#
 already_started = False
-dataloader_length = len(dataloader_train) + len(dataloader_val)
-start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, dataloader_length)
+start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, len(dataloader_train))
 for epoch in tqdm(range(start_epoch, opt.num_epochs)):
-    dataloader = itertools.chain(dataloader_train, dataloader_val)
+
+    train_val = epoch >= opt.start_val_training_epoch
+
+    if train_val:
+        dataloader = itertools.chain(dataloader_train, dataloader_val)
+    else:
+        dataloader = dataloader_train
+
     for i, data_i in enumerate(dataloader):
         if not already_started and i < start_iter:
             continue
         already_started = True
-        cur_iter = epoch*dataloader_length + i
+
+        if train_val:
+            cur_iter = (
+                    opt.start_val_training_epoch * len(dataloader_train) +
+                    (epoch - opt.start_val_training_epoch * (len(dataloader_val) + len(dataloader_train))) +
+                    i
+            )
+        else:
+            cur_iter = epoch * len(dataloader_train) + i
+
         image, label, for_metrics = models.preprocess_input(opt, data_i)
 
         #--- generator update ---#
