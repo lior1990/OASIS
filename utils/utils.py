@@ -141,7 +141,7 @@ def update_EMA(model, cur_iter, dataloader, opt, force_run_stats=False):
         with torch.no_grad():
             num_upd = 0
             for i, data_i in enumerate(dataloader):
-                image, label = models.preprocess_input(opt, data_i)
+                image, label, _ = models.preprocess_input(opt, data_i)
                 fake = model.module.netEMA(label)
                 num_upd += 1
                 if num_upd > 50:

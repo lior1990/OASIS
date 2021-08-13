@@ -55,7 +55,7 @@ class fid_pytorch():
             netEMA.eval()
         with torch.no_grad():
             for i, data_i in enumerate(self.val_dataloader):
-                image, label = models.preprocess_input(self.opt, data_i)
+                image, label, _ = models.preprocess_input(self.opt, data_i)
                 if self.opt.no_EMA:
                     generated = netG(label)
                 else:

@@ -32,7 +32,7 @@ class Ade20kDataset(torch.utils.data.Dataset):
         label = Image.open(os.path.join(self.paths[1], self.labels[idx]))
         image, label = self.transforms(image, label)
         label = label * 255
-        return {"image": image, "label": label, "name": self.images[idx]}
+        return {"image": image, "label": label, "name": self.images[idx], "for_metrics": self.for_metrics}
 
     def list_images(self):
         mode = "validation" if self.opt.phase == "test" or self.for_metrics else "training"

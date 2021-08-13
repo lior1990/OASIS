@@ -1,4 +1,4 @@
-
+import itertools
 
 import torch
 from tqdm import tqdm
@@ -32,14 +32,16 @@ optimizerD = torch.optim.Adam(model.module.netD.parameters(), lr=opt.lr_d, betas
 
 #--- the training loop ---#
 already_started = False
-start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, len(dataloader))
+dataloader_length = len(dataloader) + len(dataloader_val)
+dataloader = itertools.chain(dataloader, dataloader_val)
+start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, dataloader_length)
 for epoch in tqdm(range(start_epoch, opt.num_epochs)):
     for i, data_i in enumerate(dataloader):
         if not already_started and i < start_iter:
             continue
         already_started = True
-        cur_iter = epoch*len(dataloader) + i
-        image, label = models.preprocess_input(opt, data_i)
+        cur_iter = epoch*dataloader_length + i
+        image, label, for_metrics = models.preprocess_input(opt, data_i)
 
         #--- generator update ---#
         model.module.netG.zero_grad()
@@ -48,12 +50,13 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         loss_G.backward()
         optimizerG.step()
 
-        #--- discriminator update ---#
-        model.module.netD.zero_grad()
-        loss_D, losses_D_list = model(image, label, "losses_D", losses_computer)
-        loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
-        loss_D.backward()
-        optimizerD.step()
+        if not for_metrics.any():
+            #--- discriminator update ---#
+            model.module.netD.zero_grad()
+            loss_D, losses_D_list = model(image, label, "losses_D", losses_computer)
+            loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
+            loss_D.backward()
+            optimizerD.step()
 
         #--- stats update ---#
         if not opt.no_EMA:
