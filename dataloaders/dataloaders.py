@@ -6,6 +6,8 @@ def get_dataset_name(mode):
         return "Ade20kDataset"
     if mode == "ade_like":
         return "AdeLikeDataset"
+    if mode == "ade_like_raw":
+        return "AdeLikeRawDataset"
     if mode == "cityscapes":
         return "CityscapesDataset"
     if mode == "coco":
