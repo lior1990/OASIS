@@ -4,9 +4,9 @@ import os
 import utils.utils as utils
 
 
-def read_arguments(train=True):
+def read_arguments(train=True, train_encoder = False):
     parser = argparse.ArgumentParser()
-    parser = add_all_arguments(parser, train)
+    parser = add_all_arguments(parser, train, train_encoder)
     parser.add_argument('--phase', type=str, default='train')
     opt = parser.parse_args()
     if train:
@@ -24,7 +24,7 @@ def read_arguments(train=True):
     return opt
 
 
-def add_all_arguments(parser, train):
+def add_all_arguments(parser, train, train_encoder):
     #--- general options ---
     parser.add_argument('--name', type=str, default='label2coco', help='name of the experiment. It decides where to store samples and models')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
@@ -72,6 +72,14 @@ def add_all_arguments(parser, train):
     else:
         parser.add_argument('--results_dir', type=str, default='./results/', help='saves testing results here.')
         parser.add_argument('--ckpt_iter', type=str, default='best', help='which epoch to load to evaluate a model')
+
+    if train_encoder:
+        parser.add_argument('--path', type=str, required=True)
+        parser.add_argument('--niter', type=int, default=100)
+        parser.add_argument('--loss', type=str, default="l1", help="l1/l2/vgg")
+        parser.add_argument('--optimizer', type=str, default="adam", help='adam/sgd')
+        parser.add_argument('--lr', type=float, default=0.001, help='initial learning rate for optimizer')
+
     return parser
 
 

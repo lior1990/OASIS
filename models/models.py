@@ -72,6 +72,14 @@ class OASIS_model(nn.Module):
                     fake = self.netEMA(label)
             return fake
 
+        if mode == "eval":
+            if self.opt.no_EMA:
+                fake = self.netG(label)
+            else:
+                fake = self.netEMA(label)
+            return fake
+
+
     def load_checkpoints(self):
         if self.opt.phase == "test":
             which_iter = self.opt.ckpt_iter
