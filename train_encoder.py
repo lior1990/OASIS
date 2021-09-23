@@ -37,7 +37,7 @@ model = models.OASIS_model(opt)
 model = models.put_on_multi_gpus(model, opt)
 model.eval()
 
-vector_quantizer = VectorQuantizer(opt.label_nc)
+vector_quantizer = VectorQuantizer(opt.semantic_nc)
 
 #--- create utils ---#
 image_saver = utils.results_saver(opt)
@@ -63,12 +63,12 @@ else:
 
 n_epochs = opt.niter
 
-if len(opt.gpu_ids) > 0:
+if opt.gpu_ids != "-1":
     encoder.cuda()
 
 for epoch in range(n_epochs):
     for i, img in enumerate(dataloader):
-        if len(opt.gpu_ids) > 0:
+        if opt.gpu_ids != "-1":
             img = img.cuda()
 
         label_tensor = encoder(img)
@@ -87,7 +87,7 @@ encoder.eval()
 
 for i, img in enumerate(dataloader):
     with torch.no_grad():
-        if len(opt.gpu_ids) > 0:
+        if opt.gpu_ids != "-1":
             img = img.cuda()
 
         label_tensor = encoder(img)
