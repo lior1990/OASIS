@@ -98,4 +98,4 @@ for i, img in enumerate(dataloader):
         for b in range(generated.shape[0]):
             print(f'process image {i} {b}')
             print(f"labels for image {i}_{b} are: {torch.unique(min_encoding_indices)}")
-            image_saver([label_tensor_one_hot], [generated], [f"{i}_{b}.png"])
+            image_saver(label_tensor_one_hot, generated, [f"{i}_{b}.png"])
