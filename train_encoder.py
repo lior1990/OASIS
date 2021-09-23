@@ -2,6 +2,7 @@ import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
+from dataloaders import dataloaders
 from dataloaders.folder_dataset import FolderDataset
 import config
 
@@ -13,6 +14,9 @@ from models.losses import VGGLoss
 from utils import utils
 
 opt = config.read_arguments(train=False, train_encoder=True)
+
+#--- create dataloader ---#
+_, _ = dataloaders.get_dataloaders(opt)  # do this because opt is modified in-place
 
 transforms = transforms.Compose([
     transforms.Resize((256, 256)),
