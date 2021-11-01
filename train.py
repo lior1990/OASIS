@@ -12,6 +12,8 @@ import config
 
 
 #--- read options ---#
+from utils.mix_itertools import mix_dataloaders
+
 opt = config.read_arguments(train=True)
 
 #--- create utils ---#
@@ -32,35 +34,23 @@ optimizerD = torch.optim.Adam(model.module.netD.parameters(), lr=opt.lr_d, betas
 
 #--- the training loop ---#
 already_started = False
-start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, len(dataloader_train))
+dataloader_len = len(dataloader_train) + len(dataloader_val)
+start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, dataloader_len)
 for epoch in tqdm(range(start_epoch, opt.num_epochs)):
 
-    train_val = epoch >= opt.start_val_training_epoch
-
-    if train_val:
-        dataloader = itertools.chain(dataloader_train, dataloader_val)
-    else:
-        dataloader = dataloader_train
-
-    for i, data_i in enumerate(dataloader):
+    for i, (data_i, train_or_val) in enumerate(mix_dataloaders(dataloader_train, dataloader_val)):
         if not already_started and i < start_iter:
             continue
         already_started = True
 
-        if train_val:
-            cur_iter = (
-                    opt.start_val_training_epoch * len(dataloader_train) +
-                    ((epoch - opt.start_val_training_epoch) * (len(dataloader_val) + len(dataloader_train))) +
-                    i
-            )
-        else:
-            cur_iter = epoch * len(dataloader_train) + i
+        cur_iter = epoch * dataloader_len + i
+        fake_only = train_or_val == "val"
 
         image, label, for_metrics = models.preprocess_input(opt, data_i)
 
         #--- generator update ---#
         model.module.netG.zero_grad()
-        loss_G, losses_G_list = model(image, label, "losses_G", losses_computer)
+        loss_G, losses_G_list = model(image, label, "losses_G", losses_computer, fake_only)
         loss_G, losses_G_list = loss_G.mean(), [loss.mean() if loss is not None else None for loss in losses_G_list]
         loss_G.backward()
         optimizerG.step()
@@ -68,14 +58,14 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         if not (for_metrics > 0).any():
             #--- discriminator update ---#
             model.module.netD.zero_grad()
-            loss_D, losses_D_list = model(image, label, "losses_D", losses_computer)
+            loss_D, losses_D_list = model(image, label, "losses_D", losses_computer, fake_only)
             loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
             loss_D.backward()
             optimizerD.step()
 
         #--- stats update ---#
         if not opt.no_EMA:
-            utils.update_EMA(model, cur_iter, dataloader, opt)
+            utils.update_EMA(model, cur_iter, dataloader_train, opt)
         if cur_iter % opt.freq_print == 0:
             im_saver.visualize_batch(model, image, label, cur_iter)
             timer(epoch, cur_iter)
@@ -90,7 +80,7 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         visualizer_losses(cur_iter, losses_G_list+losses_D_list)
 
 #--- after training ---#
-utils.update_EMA(model, cur_iter, dataloader, opt, force_run_stats=True)
+utils.update_EMA(model, cur_iter, dataloader_train, opt, force_run_stats=True)
 utils.save_networks(opt, cur_iter, model)
 utils.save_networks(opt, cur_iter, model, latest=True)
 is_best = fid_computer.update(model, cur_iter)

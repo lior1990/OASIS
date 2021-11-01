@@ -29,7 +29,7 @@ class OASIS_model(nn.Module):
             if opt.add_vgg_loss:
                 self.VGG_loss = losses.VGGLoss(self.opt.gpu_ids)
 
-    def forward(self, image, label, mode, losses_computer):
+    def forward(self, image, label, mode, losses_computer, fake_only=False):
         # Branching is applied to be compatible with DataParallel
         if mode == "losses_G":
             loss_G = 0
@@ -37,7 +37,7 @@ class OASIS_model(nn.Module):
             output_D = self.netD(fake)
             loss_G_adv = losses_computer.loss(output_D, label, for_real=True)
             loss_G += loss_G_adv
-            if self.opt.add_vgg_loss:
+            if self.opt.add_vgg_loss and not fake_only:
                 loss_G_vgg = self.opt.lambda_vgg * self.VGG_loss(fake, image)
                 loss_G += loss_G_vgg
             else:
@@ -51,10 +51,12 @@ class OASIS_model(nn.Module):
             output_D_fake = self.netD(fake)
             loss_D_fake = losses_computer.loss(output_D_fake, label, for_real=False)
             loss_D += loss_D_fake
-            output_D_real = self.netD(image)
-            loss_D_real = losses_computer.loss(output_D_real, label, for_real=True)
-            loss_D += loss_D_real
-            if not self.opt.no_labelmix:
+            loss_D_real = 0
+            if not fake_only:
+                output_D_real = self.netD(image)
+                loss_D_real = losses_computer.loss(output_D_real, label, for_real=True)
+                loss_D += loss_D_real
+            if not (self.opt.no_labelmix or fake_only):
                 mixed_inp, mask = generate_labelmix(label, fake, image)
                 output_D_mixed = self.netD(mixed_inp)
                 loss_D_lm = self.opt.lambda_labelmix * losses_computer.loss_labelmix(mask, output_D_mixed, output_D_fake,

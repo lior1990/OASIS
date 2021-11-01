@@ -13,9 +13,9 @@ class Ade20kDataset(torch.utils.data.Dataset):
         else:
             opt.load_size = 286
         opt.crop_size = 256
-        opt.label_nc = 150
-        opt.contain_dontcare_label = True
-        opt.semantic_nc = 151 # label_nc + unknown
+        opt.label_nc = 15
+        opt.contain_dontcare_label = False
+        opt.semantic_nc = 15  # label_nc + unknown
         opt.cache_filelist_read = False
         opt.cache_filelist_write = False
         opt.aspect_ratio = 1.0
