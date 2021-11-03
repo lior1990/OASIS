@@ -22,7 +22,7 @@ visualizer_losses = utils.losses_saver(opt)
 losses_computer = losses.losses_computer(opt)
 dataloader_train, dataloader_val = dataloaders.get_dataloaders(opt)
 im_saver = utils.image_saver(opt)
-fid_computer = fid_pytorch(opt, dataloader_val)
+# fid_computer = fid_pytorch(opt, dataloader_val)
 
 #--- create models ---#
 model = models.OASIS_model(opt)
@@ -34,7 +34,7 @@ optimizerD = torch.optim.Adam(model.module.netD.parameters(), lr=opt.lr_d, betas
 
 #--- the training loop ---#
 already_started = False
-dataloader_len = len(dataloader_train) + len(dataloader_val)
+dataloader_len = max(len(dataloader_train) + len(dataloader_val), 2*len(dataloader_val))  # due to mix_dataloaders
 start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, dataloader_len)
 for epoch in tqdm(range(start_epoch, opt.num_epochs)):
 
@@ -72,19 +72,19 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
             utils.save_networks(opt, cur_iter, model)
         if cur_iter % opt.freq_save_latest == 0:
             utils.save_networks(opt, cur_iter, model, latest=True)
-        if cur_iter % opt.freq_fid == 0 and cur_iter > 0:
-            is_best = fid_computer.update(model, cur_iter)
-            if is_best:
-                utils.save_networks(opt, cur_iter, model, best=True)
+        # if cur_iter % opt.freq_fid == 0 and cur_iter > 0:
+        #     is_best = fid_computer.update(model, cur_iter)
+        #     if is_best:
+        #         utils.save_networks(opt, cur_iter, model, best=True)
         visualizer_losses(cur_iter, losses_G_list+losses_D_list)
 
 #--- after training ---#
 utils.update_EMA(model, cur_iter, dataloader_train, opt, force_run_stats=True)
 utils.save_networks(opt, cur_iter, model)
 utils.save_networks(opt, cur_iter, model, latest=True)
-is_best = fid_computer.update(model, cur_iter)
-if is_best:
-    utils.save_networks(opt, cur_iter, model, best=True)
+# is_best = fid_computer.update(model, cur_iter)
+# if is_best:
+#     utils.save_networks(opt, cur_iter, model, best=True)
 
 print("The training has successfully finished")
 
