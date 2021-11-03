@@ -89,9 +89,7 @@ class losses_saver():
 
     def __call__(self, epoch, losses):
         for i, loss in enumerate(losses):
-            if loss is None:
-                self.cur_estimates[i] = None
-            else:
+            if loss is not None:
                 self.cur_estimates[i] += loss.detach().cpu().numpy()
         if epoch % self.freq_smooth_loss == self.freq_smooth_loss-1:
             for i, loss in enumerate(losses):
