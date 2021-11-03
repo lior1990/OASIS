@@ -13,9 +13,9 @@ class Ade20kDataset(torch.utils.data.Dataset):
         else:
             opt.load_size = 286
         opt.crop_size = 256
-        opt.label_nc = 15
+        opt.label_nc = 26
         opt.contain_dontcare_label = False
-        opt.semantic_nc = 15  # label_nc + unknown
+        opt.semantic_nc = 26  # label_nc + unknown
         opt.cache_filelist_read = False
         opt.cache_filelist_write = False
         opt.aspect_ratio = 1.0
@@ -40,13 +40,24 @@ class Ade20kDataset(torch.utils.data.Dataset):
         path_lab = os.path.join(self.opt.dataroot, "annotations", mode)
         img_list = os.listdir(path_img)
         lab_list = os.listdir(path_lab)
-        img_list = [filename for filename in img_list if ".png" in filename or ".jpg" in filename]
         lab_list = [filename for filename in lab_list if ".png" in filename or ".jpg" in filename]
+
+        if mode != "validation":
+            img_list = [filename for filename in img_list if ".png" in filename or ".jpg" in filename]
+        else:
+            img_list = []
+            for label_path in lab_list:
+                corresponding_img_name = os.path.basename(label_path)
+                corresponding_img_name = f"{'_'.join(corresponding_img_name.split('_')[:-2])}.jpg"
+                img_list.append(os.path.join(path_img, corresponding_img_name))
+
         images = sorted(img_list)
         labels = sorted(lab_list)
-        assert len(images)  == len(labels), "different len of images and labels %s - %s" % (len(images), len(labels))
+        assert len(images) == len(labels), "different len of images and labels %s - %s" % (len(images), len(labels))
         for i in range(len(images)):
-            assert os.path.splitext(images[i])[0] == os.path.splitext(labels[i])[0], '%s and %s are not matching' % (images[i], labels[i])
+            img_name_w_o_ext = os.path.splitext(os.path.basename(images[i]))[0]
+            label_name_w_o_ext = os.path.splitext(os.path.basename(labels[i]))[0]
+            assert label_name_w_o_ext.startswith(img_name_w_o_ext), '%s and %s are not matching' % (images[i], labels[i])
         return images, labels, (path_img, path_lab)
 
     def transforms(self, image, label):
