@@ -1,4 +1,6 @@
 import itertools
+from random import random
+import numpy as np
 
 import torch
 from tqdm import tqdm
@@ -7,6 +9,7 @@ import models.losses as losses
 import models.models as models
 import dataloaders.dataloaders as dataloaders
 import utils.utils as utils
+from utils.cutmix import rand_bbox
 from utils.fid_scores import fid_pytorch
 import config
 
@@ -36,6 +39,9 @@ optimizerD = torch.optim.Adam(model.module.netD.parameters(), lr=opt.lr_d, betas
 already_started = False
 dataloader_len = max(len(dataloader_train) + len(dataloader_val), 2*len(dataloader_val))  # due to mix_dataloaders
 start_epoch, start_iter = utils.get_start_iters(opt.loaded_latest_iter, dataloader_len)
+
+losses_D_list = [None, None, None]  # "D_fake", "D_real", "LabelMix"
+
 for epoch in tqdm(range(start_epoch, opt.num_epochs)):
 
     for i, (data_i, train_or_val) in enumerate(mix_dataloaders(dataloader_train, dataloader_val)):
@@ -45,6 +51,16 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
 
         cur_iter = epoch * dataloader_len + i
         fake_only = train_or_val == "val"
+
+        if not fake_only and random() > (1-opt.cutmix_prob):
+            for _ in range(opt.n_times_cutmix):
+                lam = np.random.uniform()
+                size = data_i["image"].size()
+                bbx1, bby1, bbx2, bby2 = rand_bbox(size, lam)
+                batch_index_permutation = torch.randperm(size[0])
+
+                data_i["image"][:, :, bbx1:bbx2, bby1:bby2] = data_i["image"][batch_index_permutation, :, bbx1:bbx2, bby1:bby2]
+                data_i["label"][:, :, bbx1:bbx2, bby1:bby2] = data_i["label"][batch_index_permutation, :, bbx1:bbx2, bby1:bby2]
 
         image, label, for_metrics = models.preprocess_input(opt, data_i)
 
@@ -56,11 +72,12 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         optimizerG.step()
 
         #--- discriminator update ---#
-        model.module.netD.zero_grad()
-        loss_D, losses_D_list = model(image, label, "losses_D", losses_computer, fake_only)
-        loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
-        loss_D.backward()
-        optimizerD.step()
+        if not (fake_only and opt.no_disc_val):
+            model.module.netD.zero_grad()
+            loss_D, losses_D_list = model(image, label, "losses_D", losses_computer, fake_only)
+            loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
+            loss_D.backward()
+            optimizerD.step()
 
         #--- stats update ---#
         if not opt.no_EMA:
