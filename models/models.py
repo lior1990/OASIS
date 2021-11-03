@@ -51,7 +51,7 @@ class OASIS_model(nn.Module):
             output_D_fake = self.netD(fake)
             loss_D_fake = losses_computer.loss(output_D_fake, label, for_real=False)
             loss_D += loss_D_fake
-            loss_D_real = 0
+            loss_D_real = None
             if not fake_only:
                 output_D_real = self.netD(image)
                 loss_D_real = losses_computer.loss(output_D_real, label, for_real=True)

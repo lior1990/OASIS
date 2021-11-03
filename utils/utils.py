@@ -54,9 +54,12 @@ class timer():
         self.file_name = os.path.join(opt.checkpoints_dir, opt.name, "progress.txt")
 
     def __call__(self, epoch, cur_iter):
-        if cur_iter != 0:
-            avg = (time.time() - self.prev_time) / (cur_iter - self.prev_epoch)
-        else:
+        try:
+            if cur_iter != 0:
+                avg = (time.time() - self.prev_time) / (cur_iter - self.prev_epoch)
+            else:
+                avg = 0
+        except ZeroDivisionError:
             avg = 0
         self.prev_time = time.time()
         self.prev_epoch = cur_iter
