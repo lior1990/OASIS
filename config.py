@@ -63,6 +63,7 @@ def add_all_arguments(parser, train, train_encoder):
 
         parser.add_argument('--channels_D', type=int, default=64, help='# of discrim filters in first conv layer in discriminator')
         parser.add_argument('--add_vgg_loss', action='store_true', help='if specified, add VGG feature matching loss')
+        parser.add_argument('--add_ref_vgg_loss', action='store_true', help='if specified, add VGG feature matching loss for reference images')
         parser.add_argument('--lambda_vgg', type=float, default=10.0, help='weight for VGG loss')
         parser.add_argument('--no_balancing_inloss', action='store_true', default=False, help='if specified, do *not* use class balancing in the loss function')
         parser.add_argument('--no_labelmix', action='store_true', default=False, help='if specified, do *not* use LabelMix')

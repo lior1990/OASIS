@@ -26,7 +26,7 @@ class OASIS_model(nn.Module):
         self.load_checkpoints()
         #--- perceptual loss ---#
         if opt.phase == "train":
-            if opt.add_vgg_loss:
+            if opt.add_vgg_loss or opt.add_ref_vgg_loss:
                 self.VGG_loss = losses.VGGLoss(self.opt.gpu_ids)
 
     def forward(self, image, label, mode, losses_computer, fake_only=False):
@@ -38,6 +38,9 @@ class OASIS_model(nn.Module):
             loss_G_adv = losses_computer.loss(output_D, label, for_real=True)
             loss_G += loss_G_adv
             if self.opt.add_vgg_loss and not fake_only:
+                loss_G_vgg = self.opt.lambda_vgg * self.VGG_loss(fake, image)
+                loss_G += loss_G_vgg
+            elif self.opt.add_ref_vgg_loss and fake_only:
                 loss_G_vgg = self.opt.lambda_vgg * self.VGG_loss(fake, image)
                 loss_G += loss_G_vgg
             else:
