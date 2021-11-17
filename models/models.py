@@ -35,7 +35,7 @@ class OASIS_model(nn.Module):
             loss_G = 0
             fake = self.netG(label)
             output_D = self.netD(fake)
-            loss_G_adv = losses_computer.loss(output_D, label, for_real=True)
+            loss_G_adv = losses_computer.loss(output_D, label, losses.TargetMode.REAL)
             loss_G += loss_G_adv
             if self.opt.add_vgg_loss and not fake_only:
                 loss_G_vgg = self.opt.lambda_vgg * self.VGG_loss(fake, image)
@@ -52,18 +52,18 @@ class OASIS_model(nn.Module):
             with torch.no_grad():
                 fake = self.netG(label)
             output_D_fake = self.netD(fake)
-            loss_D_fake = losses_computer.loss(output_D_fake, label, for_real=False)
+            loss_D_fake = losses_computer.loss(output_D_fake, label, losses.TargetMode.FAKE)
             loss_D += loss_D_fake
-            loss_D_real = None
-            if not fake_only:
-                output_D_real = self.netD(image)
-                loss_D_real = losses_computer.loss(output_D_real, label, for_real=True)
-                loss_D += loss_D_real
-            if not (self.opt.no_labelmix or fake_only):
+            target_mode = losses.TargetMode.OTHER if fake_only else losses.TargetMode.REAL
+            output_D_real = self.netD(image)
+            loss_D_real = losses_computer.loss(output_D_real, label, target_mode)
+            loss_D += loss_D_real
+            if not self.opt.no_labelmix:
                 mixed_inp, mask = generate_labelmix(label, fake, image)
                 output_D_mixed = self.netD(mixed_inp)
-                loss_D_lm = self.opt.lambda_labelmix * losses_computer.loss_labelmix(mask, output_D_mixed, output_D_fake,
-                                                                                output_D_real)
+                loss_D_lm = self.opt.lambda_labelmix * losses_computer.loss_labelmix(
+                    mask, output_D_mixed, output_D_fake, output_D_real
+                )
                 loss_D += loss_D_lm
             else:
                 loss_D_lm = None

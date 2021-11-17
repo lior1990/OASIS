@@ -72,12 +72,11 @@ for epoch in tqdm(range(start_epoch, opt.num_epochs)):
         optimizerG.step()
 
         #--- discriminator update ---#
-        if not (fake_only and opt.no_disc_val):
-            model.module.netD.zero_grad()
-            loss_D, losses_D_list = model(image, label, "losses_D", losses_computer, fake_only)
-            loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
-            loss_D.backward()
-            optimizerD.step()
+        model.module.netD.zero_grad()
+        loss_D, losses_D_list = model(image, label, "losses_D", losses_computer, fake_only)
+        loss_D, losses_D_list = loss_D.mean(), [loss.mean() if loss is not None else None for loss in losses_D_list]
+        loss_D.backward()
+        optimizerD.step()
 
         #--- stats update ---#
         if not opt.no_EMA:

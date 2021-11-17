@@ -1,7 +1,15 @@
+from enum import Enum
+
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from models.vggloss import VGG19
+
+
+class TargetMode(Enum):
+    REAL = "real"
+    FAKE = "fake"
+    OTHER = "other"
 
 
 class losses_computer():
@@ -10,13 +18,13 @@ class losses_computer():
         if not opt.no_labelmix:
             self.labelmix_function = torch.nn.MSELoss()
 
-    def loss(self, input, label, for_real):
-        #--- balancing classes ---
-        weight_map = get_class_balancing(self.opt, input, label)
-        #--- n+1 loss ---
-        target = get_n1_target(self.opt, input, label, for_real)
+    def loss(self, input, label, target_mode: "TargetMode"):
+        #--- n+2 loss ---
+        target = get_n2_target(self.opt, input, label, target_mode)
         loss = F.cross_entropy(input, target, reduction='none')
-        if for_real:
+        if target_mode == TargetMode.REAL:
+            # --- balancing classes ---
+            weight_map = get_class_balancing(self.opt, input, label)
             loss = torch.mean(loss * weight_map[:, 0, :, :])
         else:
             loss = torch.mean(loss)
@@ -43,27 +51,32 @@ def get_class_balancing(opt, input, label):
     return weight_map
 
 
-def get_n1_target(opt, input, label, target_is_real):
-    targets = get_target_tensor(opt, input, target_is_real)
-    num_of_classes = label.shape[1]
-    integers = torch.argmax(label, dim=1)
-    targets = targets[:, 0, :, :] * num_of_classes
-    integers += targets.long()
-    integers = torch.clamp(integers, min=num_of_classes-1) - num_of_classes + 1
-    return integers
+def get_n2_target(opt, input, label, target_mode: "TargetMode"):
+    target_is_real = target_mode in [TargetMode.REAL, TargetMode.OTHER]
+
+    if target_mode == TargetMode.REAL:
+        integers = torch.argmax(label, dim=1)
+        return integers + 2  # convert labels to start from 2
+    elif target_mode in [TargetMode.FAKE, TargetMode.OTHER]:
+        # other -> label 1
+        # fake -> label 0
+        input_spatial_dim = (input.shape[0], input.shape[2], input.shape[3])
+        return get_target_tensor(opt, input_spatial_dim, target_is_real)
+    else:
+        raise NotImplementedError
 
 
 def get_target_tensor(opt, input, target_is_real):
     if opt.gpu_ids != "-1":
         if target_is_real:
-            return torch.cuda.FloatTensor(1).fill_(1.0).requires_grad_(False).expand_as(input)
+            return torch.cuda.LongTensor(1).fill_(1.0).requires_grad_(False).expand(input)
         else:
-            return torch.cuda.FloatTensor(1).fill_(0.0).requires_grad_(False).expand_as(input)
+            return torch.cuda.LongTensor(1).fill_(0.0).requires_grad_(False).expand(input)
     else:
         if target_is_real:
-            return torch.FloatTensor(1).fill_(1.0).requires_grad_(False).expand_as(input)
+            return torch.LongTensor(1).fill_(1.0).requires_grad_(False).expand(input)
         else:
-            return torch.FloatTensor(1).fill_(0.0).requires_grad_(False).expand_as(input)
+            return torch.LongTensor(1).fill_(0.0).requires_grad_(False).expand(input)
 
 
 class VGGLoss(nn.Module):
